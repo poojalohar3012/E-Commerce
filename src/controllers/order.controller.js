@@ -94,7 +94,218 @@ const getMyOrders = async (req, res) => {
     }
 };
 
+const getOrderById = async (req, res) => {
+    try {
+        const order = await Order.findById(req.params.id)
+            .populate("user", "name email")
+            .populate("orderItems.product", "name price image");
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: "Order not found",
+            });
+        }
+
+        // Only the owner can view the order
+        if (order.user._id.toString() !== req.user.id) {
+            return res.status(403).json({
+                success: false,
+                message: "Not authorized to view this order",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            order,
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
+const updateOrder = async (req, res) => {
+    try {
+        const order = await Order.findById(req.params.id);
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: "Order not found",
+            });
+        }
+
+        // Check ownership
+        if (order.user.toString() !== req.user.id) {
+            return res.status(403).json({
+                success: false,
+                message: "Not authorized to update this order",
+            });
+        }
+
+        // Allow update only when Processing
+        if (order.orderStatus !== "Processing") {
+            return res.status(400).json({
+                success: false,
+                message: "Order cannot be updated after shipping",
+            });
+        }
+
+        const { shippingAddress, paymentMethod } = req.body;
+
+        if (shippingAddress) {
+            order.shippingAddress = shippingAddress;
+        }
+
+        if (paymentMethod) {
+            order.paymentMethod = paymentMethod;
+        }
+
+        await order.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Order updated successfully",
+            order,
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
+const deleteOrder = async (req, res) => {
+    try {
+        const order = await Order.findById(req.params.id);
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: "Order not found",
+            });
+        }
+
+        if (order.user.toString() !== req.user.id) {
+            return res.status(403).json({
+                success: false,
+                message: "Not authorized to delete this order",
+            });
+        }
+
+        if (order.orderStatus !== "Processing") {
+            return res.status(400).json({
+                success: false,
+                message: "Order cannot be cancelled",
+            });
+        }
+
+        // Restore stock
+        for (const item of order.orderItems) {
+            await Product.findByIdAndUpdate(item.product, {
+                $inc: {
+                    stock: item.quantity,
+                },
+            });
+        }
+
+        order.orderStatus = "Cancelled";
+
+        await order.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Order cancelled successfully",
+            order,
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
+//Admin 
+const getAllOrders = async (req, res) => {
+    try {
+        const orders = await Order.find()
+            .populate("user", "name email")
+            .sort({ createdAt: -1 });
+
+        return res.status(200).json({
+            success: true,
+            count: orders.length,
+            orders,
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
+const updateOrderStatus = async (req, res) => {
+    try {
+        const { orderStatus } = req.body;
+
+        const order = await Order.findById(req.params.id);
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: "Order not found",
+            });
+        }
+
+        if (
+            order.paymentMethod !== "COD" &&
+            order.paymentStatus === "Pending" &&
+            orderStatus === "Shipped"
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Payment is pending. Cannot ship this order.",
+            });
+        }
+
+        order.orderStatus = orderStatus;
+
+        if (orderStatus === "Delivered") {
+            order.deliveredAt = Date.now();
+        }
+
+        await order.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Order status updated successfully",
+            order,
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
 module.exports = {
     placeOrder,
-    getMyOrders
+    getMyOrders,
+    getOrderById,
+    updateOrder,
+    deleteOrder,
+    getAllOrders,
+    updateOrderStatus
 };

@@ -1,18 +1,20 @@
 
 const productService = require("../services/product.service");
-const asyncHandler = require("../utils/asyncHandler")
+const asyncHandler = require("../utils/asyncHandler");
 
 const createProduct = asyncHandler(async (req, res) => {
-  const product = await productService.createProduct(
-    req.body,
-    req.user.id
-  );
 
-  res.status(201).json({
-    success: true,
-    message: "Product created successfully",
-    data: product,
-  });
+    const product = await productService.createProduct(
+        req.body,
+        req.file,
+        req.user.id
+    );
+
+    res.status(201).json({
+        success: true,
+        message: "Product created successfully",
+        data: product,
+    });
 });
 
 const getAllProducts = asyncHandler(async (req, res) => {
@@ -39,11 +41,10 @@ const getProductById = asyncHandler(async (req, res) => {
 
 const updateProduct = asyncHandler(async (req, res) => {
 
-  console.log("Controller req.body:", req.body);
-
     const product = await productService.updateProduct(
         req.params.id,
-        req.body
+        req.body,
+        req.file
     );
 
     res.status(200).json({

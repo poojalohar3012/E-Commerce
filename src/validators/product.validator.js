@@ -18,6 +18,19 @@ const createProductValidation = (data) => {
   return schema.validate(data);
 };
 
+const updateProductValidation = (data) => {
+  const schema = Joi.object({
+    name: Joi.string(),
+    description: Joi.string(),
+    price: Joi.number(),
+    category: Joi.string(),
+    stock: Joi.number(),
+  });
+
+  return schema.validate(data);
+};
+
 module.exports = {
   createProductValidation,
+  updateProductValidation
 };

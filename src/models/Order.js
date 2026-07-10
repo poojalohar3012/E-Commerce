@@ -38,23 +38,56 @@ const orderSchema = new mongoose.Schema(
         orderItems: [orderItemSchema],
 
         shippingAddress: {
-            address: String,
-            city: String,
-            state: String,
-            postalCode: String,
-            country: String,
+            address: {
+                type: String,
+                required: true,
+            },
+            city: {
+                type: String,
+                required: true,
+            },
+            state: {
+                type: String,
+                required: true,
+            },
+            postalCode: {
+                type: String,
+                required: true,
+            },
+            country: {
+                type: String,
+                required: true,
+            },
         },
 
         paymentMethod: {
             type: String,
-            enum: ["COD", "Card", "UPI"],
+            enum: ["COD", "Card", "UPI", "Razorpay"],
             default: "COD",
         },
 
         paymentStatus: {
             type: String,
-            enum: ["Pending", "Paid"],
+            enum: ["Pending", "Paid", "Failed", "Refunded"],
             default: "Pending",
+        },
+
+        razorpayOrderId: {
+            type: String,
+        },
+
+        paymentResult: {
+            paymentId: {
+                type: String,
+            },
+
+            orderId: {
+                type: String,
+            },
+
+            signature: {
+                type: String,
+            },
         },
 
         orderStatus: {
@@ -73,7 +106,10 @@ const orderSchema = new mongoose.Schema(
             required: true,
         },
 
-        deliveredAt: Date,
+        deliveredAt: {
+            type: Date,
+        },
+
     },
     {
         timestamps: true,

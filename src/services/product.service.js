@@ -2,19 +2,29 @@
 const mongoose = require("mongoose");
 const Product = require("../models/Product");
 const ApiError = require("../utils/ApiError");
-const {
-  createProductValidation,
-} = require("../validators/product.validator");
+const { createProductValidation, updateProductValidation } = require("../validators/product.validator");
 
-const createProduct = async (data, userId) => {
+const uploadToCloudinary = require("../utils/cloudinaryUpload");
+
+const createProduct = async (data, file, userId) => {
   const { error } = createProductValidation(data);
 
   if (error) {
     throw new ApiError(400, error.details[0].message);
   }
 
+  if (!file) {
+    throw new ApiError(400, "Product image is required");
+  }
+
+  const uploadedImage = await uploadToCloudinary(file.buffer);
+
   const product = await Product.create({
     ...data,
+    image: {
+        url: uploadedImage.secure_url,
+        public_id: uploadedImage.public_id,
+    },
     createdBy: userId,
   });
 
@@ -108,16 +118,41 @@ const getProductById = async (id) => {
   return product;
 };
 
-const updateProduct = async (id, data) => {
-  const { error } = createProductValidation(data);
+const updateProduct = async (id, data, file) => {
+  const { error } = updateProductValidation(data);
 
   if (error) {
     throw new ApiError(400, error.details[0].message);
   }
-  console.log("ID:", id);
-console.log("BODY:", data);
 
-  const product = await Product.findByIdAndUpdate(
+  // Find existing product
+  const product = await Product.findById(id);
+
+  if (!product) {
+    throw new ApiError(404, "Product not found");
+  }
+
+  // If a new image is uploaded
+  if (file) {
+    // Delete old image from Cloudinary
+    if (product.image?.public_id) {
+      await cloudinary.uploader.destroy(product.image.public_id);
+    }
+
+    // Upload new image
+    const uploadedImage = await uploadToCloudinary(
+      file.buffer,
+      "ecommerce-products"
+    );
+
+    // Update image data
+    data.image = {
+      url: uploadedImage.secure_url,
+      public_id: uploadedImage.public_id,
+    };
+  }
+
+  const updatedProduct = await Product.findByIdAndUpdate(
     id,
     data,
     {
@@ -126,11 +161,7 @@ console.log("BODY:", data);
     }
   );
 
-  if (!product) {
-    throw new ApiError(404, "Product not found");
-  }
-
-  return product;
+  return updatedProduct;
 };
 
 const deleteProduct = async (id) => {

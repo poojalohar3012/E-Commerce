@@ -1,17 +1,21 @@
 const Order = require("../models/Order");
 const Cart = require("../models/Cart");
 const Product = require("../models/Product");
+const paymentService = require("../services/payment.service");
+const crypto = require("crypto");
 
 const placeOrder = async (req, res) => {
     try {
+
         const userId = req.user.id;
 
-        const cart = await Cart.findOne({ user: userId }).populate("items.product");
+        const cart = await Cart.findOne({ user: userId })
+            .populate("items.product");
 
         if (!cart || cart.items.length === 0) {
             return res.status(400).json({
                 success: false,
-                message: "Cart is empty",
+                message: "Cart is empty"
             });
         }
 
@@ -19,10 +23,11 @@ const placeOrder = async (req, res) => {
         const orderItems = [];
 
         for (const item of cart.items) {
+
             if (item.product.stock < item.quantity) {
                 return res.status(400).json({
                     success: false,
-                    message: `${item.product.name} is out of stock`,
+                    message: `${item.product.name} is out of stock`
                 });
             }
 
@@ -33,45 +38,179 @@ const placeOrder = async (req, res) => {
                 name: item.product.name,
                 image: item.product.image,
                 price: item.product.price,
-                quantity: item.quantity,
+                quantity: item.quantity
             });
         }
 
         const { shippingAddress, paymentMethod } = req.body;
 
+        // =======================
+        // CASH ON DELIVERY
+        // =======================
+        if (paymentMethod === "COD") {
+
+            const order = await Order.create({
+                user: userId,
+                orderItems,
+                shippingAddress,
+                paymentMethod: "COD",
+                paymentStatus: "Pending",
+                totalPrice
+            });
+
+            // Reduce Stock
+            for (const item of cart.items) {
+                await Product.findByIdAndUpdate(
+                    item.product._id,
+                    {
+                        $inc: {
+                            stock: -item.quantity
+                        }
+                    }
+                );
+            }
+
+            // Clear Cart
+            cart.items = [];
+            await cart.save();
+
+            return res.status(201).json({
+                success: true,
+                message: "Order placed successfully",
+                order
+            });
+        }
+
+        // =======================
+        // ONLINE PAYMENT
+        // =======================
+
+        const razorpayOrder =
+            await paymentService.createRazorpayOrder(totalPrice);
+
         const order = await Order.create({
             user: userId,
             orderItems,
             shippingAddress,
-            paymentMethod,
+            paymentMethod: "Online",
+            paymentStatus: "Pending",
             totalPrice,
+
+            razorpayOrderId: razorpayOrder.id
         });
-
-        // Reduce stock
-        for (const item of cart.items) {
-            await Product.findByIdAndUpdate(item.product._id, {
-                $inc: {
-                    stock: -item.quantity,
-                },
-            });
-        }
-
-        // Clear cart
-        cart.items = [];
-        await cart.save();
 
         return res.status(201).json({
             success: true,
-            message: "Order placed successfully",
+            message: "Proceed to payment",
+
             order,
+
+            razorpayOrder
         });
 
     } catch (error) {
-        res.status(500).json({
+
+        return res.status(500).json({
             success: false,
-            message: error.message,
+            message: error.message
         });
+
     }
+};
+
+const verifyPayment = async (req, res) => {
+
+    try {
+
+        const {
+            razorpay_order_id,
+            razorpay_payment_id,
+            razorpay_signature
+        } = req.body;
+
+        const generatedSignature = crypto
+            .createHmac(
+                "sha256",
+                process.env.RAZORPAY_KEY_SECRET
+            )
+            .update(
+                `${razorpay_order_id}|${razorpay_payment_id}`
+            )
+            .digest("hex");
+
+        if (generatedSignature !== razorpay_signature) {
+
+            return res.status(400).json({
+                success: false,
+                message: "Payment verification failed"
+            });
+
+        }
+
+        const order = await Order.findOne({
+            razorpayOrderId: razorpay_order_id
+        });
+
+        if (!order) {
+
+            return res.status(404).json({
+                success: false,
+                message: "Order not found"
+            });
+
+        }
+
+        order.paymentStatus = "Paid";
+        order.razorpayPaymentId = razorpay_payment_id;
+        order.razorpaySignature = razorpay_signature;
+
+        await order.save();
+
+        // Reduce Stock
+        for (const item of order.orderItems) {
+
+            await Product.findByIdAndUpdate(
+                item.product,
+                {
+                    $inc: {
+                        stock: -item.quantity
+                    }
+                }
+            );
+
+        }
+
+        // Clear Cart
+        const cart = await Cart.findOne({
+            user: order.user
+        });
+
+        if (cart) {
+
+            cart.items = [];
+            await cart.save();
+
+        }
+
+        return res.status(200).json({
+
+            success: true,
+            message: "Payment verified successfully",
+            order
+
+        });
+
+    } catch (error) {
+
+        return res.status(500).json({
+
+            success: false,
+            message: error.message
+
+        });
+
+    }
+
 };
 
 const getMyOrders = async (req, res) => {
@@ -302,6 +441,7 @@ const updateOrderStatus = async (req, res) => {
 
 module.exports = {
     placeOrder,
+    verifyPayment,
     getMyOrders,
     getOrderById,
     updateOrder,

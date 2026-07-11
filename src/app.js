@@ -6,7 +6,6 @@ const authRoutes = require("./routes/auth.routes");
 const productRoutes = require("./routes/product.routes");
 const orderRoutes = require("./routes/order.routes")
 const cartRoutes = require("./routes/cart.routes");
-const paymentRoutes = require("./routes/payment.routes");
 const healthRoutes = require("./routes/health.routes");
 const errorHandler = require("./middleware/error.middleware");
 
@@ -26,8 +25,7 @@ app.use("/health", healthRoutes);
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/products", productRoutes);
 app.use("/api/v1/cart", cartRoutes);
-app.use("/api/v1/order", orderRoutes);
-app.use("/api/v1/payments", paymentRoutes);
+app.use("/api/v1/orders", orderRoutes);
 
 // Global Error Handler (must be last)
 app.use(errorHandler);

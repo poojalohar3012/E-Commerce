@@ -19,7 +19,7 @@ const getCart = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    ...cart,
+     data: cart,
   });
 });
 

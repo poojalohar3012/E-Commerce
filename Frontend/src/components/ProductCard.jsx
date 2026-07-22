@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 function ProductCard({ product }) {
 
     const image =
@@ -6,6 +8,7 @@ function ProductCard({ product }) {
             : product.image?.url;
 
     return (
+         <Link to={`/products/${product._id}`}>
         <div className="border rounded-lg shadow-lg p-4 hover:shadow-xl transition">
 
             <img
@@ -27,6 +30,7 @@ function ProductCard({ product }) {
             </p>
 
         </div>
+         </Link>
     );
 }
 

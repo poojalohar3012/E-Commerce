@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getAllProducts } from "../services/product.service";
 import ProductCard from "../components/ProductCard";
 
+
 function Home() {
 
     const [products, setProducts] = useState([]);

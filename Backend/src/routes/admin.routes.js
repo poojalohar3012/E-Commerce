@@ -13,7 +13,8 @@ const {
     getAllUsers,
     getAllOrders,
     updateOrderStatus,
-    getOrderById
+    getOrderById,
+    updateUserRole
 
 } = require("../controllers/admin.controller");
 
@@ -50,5 +51,12 @@ router.patch(
 );
 
 router.get("/orders/:id", protect, authorize("admin"), getOrderById);
+
+router.patch(
+    "/users/:id",
+    protect,
+    authorize("admin"),
+    updateUserRole
+);
 
 module.exports = router;

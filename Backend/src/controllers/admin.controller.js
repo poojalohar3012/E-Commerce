@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const Product = require("../models/Product");
 const Order = require("../models/Order");
+const adminService = require("../services/admin.services");
 
 
 // Dashboard Statistics
@@ -30,6 +31,11 @@ const getDashboardStats = async (req, res) => {
             }
         ]);
 
+        const recentOrders = await Order.find()
+            .populate("user", "name email")
+            .sort({ createdAt: -1 })
+            .limit(5);
+
 
         res.status(200).json({
 
@@ -39,7 +45,8 @@ const getDashboardStats = async (req, res) => {
                 totalUsers,
                 totalProducts,
                 totalOrders,
-                totalRevenue: revenue[0]?.total || 0
+                totalRevenue: revenue[0]?.total || 0,
+                recentOrders
             }
 
         });
@@ -63,14 +70,16 @@ const getAllUsers = async (req,res)=>{
 
     try {
 
-        const users = await User.find()
-        .select("-password");
+        const result =
+            await adminService.getAllUsers(
+                req.query
+            );
 
 
         res.status(200).json({
 
             success:true,
-            users
+            ...result
 
         });
 
@@ -78,8 +87,10 @@ const getAllUsers = async (req,res)=>{
     } catch(error){
 
         res.status(500).json({
+
             success:false,
             message:error.message
+
         });
 
     }
@@ -194,7 +205,47 @@ const getOrderById = async (req, res) => {
     }
 };
 
+const updateUserRole = async (req, res) => {
 
+    try {
+
+        const { role } = req.body;
+
+        if (!["admin", "user"].includes(role)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid role",
+            });
+        }
+
+        if (req.user.id === req.params.id) {
+            return res.status(400).json({
+                success: false,
+                message: "You cannot change your own role.",
+            });
+        }
+
+        const user = await adminService.updateUserRole(
+            req.params.id,
+            role
+        );
+
+        res.status(200).json({
+            success: true,
+            message: "User role updated successfully",
+            user,
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+
+    }
+
+};
 
 
 module.exports = {
@@ -202,5 +253,6 @@ module.exports = {
     getAllUsers,
     getAllOrders,
     updateOrderStatus,
+    updateUserRole,
     getOrderById
 };

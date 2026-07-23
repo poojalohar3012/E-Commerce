@@ -5,19 +5,25 @@ function AdminLayout() {
 
     const navigate = useNavigate();
 
-    const handleLogout = () => {
+   const handleLogout = () => {
+
+    const confirmLogout = window.confirm(
+        "Do you want to logout?"
+    );
+
+    if (confirmLogout) {
+
         localStorage.removeItem("accessToken");
         localStorage.removeItem("user");
 
         navigate("/login");
-        window.location.reload();
-    };
-
+    }
+};
     return (
-        <div className="min-h-screen flex bg-gray-100">
+        <div className="h-screen flex bg-gray-100 overflow-hidden">
 
             {/* Sidebar */}
-            <aside className="w-64 bg-gray-900 text-white p-6">
+           <aside className="w-64 fixed left-0 top-0 h-screen bg-gray-900 text-white p-6">
 
                 <h1 className="text-2xl font-bold mb-8">
                     Admin Panel
@@ -73,7 +79,7 @@ function AdminLayout() {
 
 
             {/* Main Content */}
-            <main className="flex-1 p-8">
+           <main className="flex-1 ml-64 p-8 overflow-y-auto h-screen">
 
                 <Outlet />
 

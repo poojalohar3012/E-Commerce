@@ -4,40 +4,43 @@ import { getDashboardStats } from "../../services/admin.service";
 
 function Dashboard() {
     const [stats, setStats] = useState({
-    totalProducts: 0,
-    totalOrders: 0,
-    totalUsers: 0,
-    totalRevenue: 0,
-});
+        totalProducts: 0,
+        totalOrders: 0,
+        totalUsers: 0,
+        totalRevenue: 0,
+        recentOrders: []
+    });
 
-const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(true);
 
-useEffect(() => {
+    useEffect(() => {
 
-    const fetchStats = async () => {
+        const fetchStats = async () => {
 
-        try {
+            try {
 
-            const response = await getDashboardStats();
+                const response = await getDashboardStats();
 
-            setStats(response.stats);
+                setStats(response.stats);
 
-        } catch (error) {
+            } catch (error) {
 
-            console.log(error);
+                console.log(error);
 
-        } finally {
+            } finally {
 
-            setLoading(false);
+                setLoading(false);
 
-        }
+            }
 
-    };
+        };
 
 
-    fetchStats();
+        fetchStats();
 
-}, []);
+    }, []);
+
+
     return (
         <div className="p-8 bg-gray-100 min-h-screen">
 
@@ -51,21 +54,21 @@ useEffect(() => {
 
                 <div className="bg-white rounded-xl shadow p-6">
                     <h2 className="text-gray-500">
-                        Total Products
+                        Total Orders
                     </h2>
 
                     <p className="text-3xl font-bold text-blue-600 mt-2">
-                        {stats.totalProducts}
+                        {stats.totalOrders}
                     </p>
                 </div>
 
                 <div className="bg-white rounded-xl shadow p-6">
                     <h2 className="text-gray-500">
-                        Total Orders
+                        Total Products
                     </h2>
 
                     <p className="text-3xl font-bold text-green-600 mt-2">
-                        {stats.totalOrders}
+                        {stats.totalProducts}
                     </p>
                 </div>
 
@@ -99,22 +102,6 @@ useEffect(() => {
                     to="/admin/products"
                     className="bg-blue-600 text-white rounded-xl p-6 text-center hover:bg-blue-700"
                 >
-                    📦
-
-                    <h2 className="text-xl font-semibold mt-3">
-                        Products
-                    </h2>
-
-                    <p className="mt-2 text-sm">
-                        Manage Products
-                    </p>
-
-                </Link>
-
-                <Link
-                    to="/admin/orders"
-                    className="bg-green-600 text-white rounded-xl p-6 text-center hover:bg-green-700"
-                >
                     🛒
 
                     <h2 className="text-xl font-semibold mt-3">
@@ -123,6 +110,22 @@ useEffect(() => {
 
                     <p className="mt-2 text-sm">
                         View Orders
+                    </p>
+
+                </Link>
+
+                <Link
+                    to="/admin/orders"
+                    className="bg-green-600 text-white rounded-xl p-6 text-center hover:bg-green-700"
+                >
+                    📦
+
+                    <h2 className="text-xl font-semibold mt-3">
+                        Product
+                    </h2>
+
+                    <p className="mt-2 text-sm">
+                        Manage Products
                     </p>
 
                 </Link>
@@ -197,19 +200,60 @@ useEffect(() => {
 
                     <tbody>
 
-                        <tr>
+                        {stats.recentOrders.length > 0 ? (
 
-                            <td className="py-4">
-                                No Orders Yet
-                            </td>
+                            stats.recentOrders.map((order) => (
 
-                            <td>-</td>
+                                <tr
+                                    key={order._id}
+                                    className="border-b"
+                                >
 
-                            <td>-</td>
+                                    <td className="py-4">
+                                        {order._id.slice(-8)}
+                                    </td>
 
-                            <td>-</td>
+                                    <td>
+                                        {order.user?.name || "Guest"}
+                                    </td>
 
-                        </tr>
+                                    <td>
+                                        ₹{order.totalPrice}
+                                    </td>
+
+                                    <td>
+                                        <span
+                                            className={`inline-block w-28 text-center px-3 py-1 rounded text-white ${order.orderStatus === "Processing"
+                                                    ? "bg-yellow-500"
+                                                    : order.orderStatus === "Shipped"
+                                                        ? "bg-blue-500"
+                                                        : order.orderStatus === "Delivered"
+                                                            ? "bg-green-500"
+                                                            : "bg-gray-500"
+                                                }`}
+                                        >
+                                            {order.orderStatus}
+                                        </span>
+                                    </td>
+
+                                </tr>
+
+                            ))
+
+                        ) : (
+
+                            <tr>
+
+                                <td
+                                    colSpan="4"
+                                    className="py-4 text-center"
+                                >
+                                    No Orders Yet
+                                </td>
+
+                            </tr>
+
+                        )}
 
                     </tbody>
 

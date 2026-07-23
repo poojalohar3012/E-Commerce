@@ -41,24 +41,21 @@ function Orders() {
 
 
 
-    const handleStatusChange = async (id,status)=>{
+ const handleStatusChange = async (id, status) => {
+    try {
+        await updateOrderStatus(id, {
+            orderStatus: status,
+        });
 
-        try{
-
-            await updateOrderStatus(id,status);
-
-            toast.success("Order status updated");
-
-            fetchOrders();
-
-        }
-        catch(error){
-
-            toast.error("Failed to update status");
-
-        }
-
+        toast.success("Order status updated");
+        fetchOrders();
+    } catch (error) {
+        console.error(error.response?.data);
+        toast.error(
+            error.response?.data?.message || "Failed to update status"
+        );
     }
+};
 
 
 

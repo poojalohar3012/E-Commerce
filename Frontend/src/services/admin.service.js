@@ -33,3 +33,26 @@ export const getOrderById = async(id)=>{
     return response.data;
 
 };
+
+export const getAllUsers = async (params) => {
+
+    const response = await api.get(
+        "/admin/users",
+        {
+            params
+        }
+    );
+
+    return response.data;
+};
+
+export const updateUserRole = async (id, role) => {
+    const response = await api.patch(
+        `/admin/users/${id}`,
+        {
+            role,
+        }
+    );
+
+    return response.data;
+};
